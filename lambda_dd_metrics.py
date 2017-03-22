@@ -4,8 +4,6 @@ Simple interface for reporting metrics to DataDog.
 '''
 
 from __future__ import print_function
-import logging
-import os
 import time
 
 class DataDogMetrics(object):
@@ -20,12 +18,6 @@ class DataDogMetrics(object):
     '''
     def __init__(self, service_prefix, stats_group):
         self.service_prefix = service_prefix
-
-        logging.basicConfig()
-        self.logger = logging.getLogger()
-        log_level = logging.getLevelName(os.environ.get('LOG_LEVEL', 'WARNING'))
-        self.logger.setLevel(log_level)
-
         self.default_tags = ['group:%s' % stats_group] if stats_group else []
 
     def incr(self, metric_name, count=1, tags=None):
