@@ -23,12 +23,13 @@ class DataDogMetrics(object):
     '''
     def __init__(self, service_prefix, stats_group):
         self.service_prefix = service_prefix
-        self.stats_group = stats_group
 
         logging.basicConfig()
         self.logger = logging.getLogger()
         log_level = logging.getLevelName(os.environ.get('LOG_LEVEL', 'WARNING'))
         self.logger.setLevel(log_level)
+
+        self.default_tags = ['group:%s' % stats_group] if stats_group else []
 
     def incr(self, metric_name, count=1, tags=None):
         '''
@@ -67,8 +68,7 @@ class DataDogMetrics(object):
         # NOT SUPPORTED YET
 
     def _build_tags(self, tags=None):
-        default_tags = ['group:%s' % self.stats_group]
-        return (tags or []) + default_tags
+        return (tags or []) + self.default_tags
 
     def _build_metric_name(self, metric_name):
         return '{0}.{1}'.format(self.service_prefix, metric_name)
