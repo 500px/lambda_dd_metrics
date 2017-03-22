@@ -17,9 +17,6 @@ class DataDogMetrics(object):
     Another method would be via the API but that one only supports gauges
         and requires auth, which I'd rather not do until they've added
         support for histograms and counts.
-
-    Follows the interface from go-utils:
-        https://github.com/500px/go-utils/blob/master/metrics/statsd_client.go
     '''
     def __init__(self, service_prefix, stats_group):
         self.service_prefix = service_prefix
