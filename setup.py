@@ -7,4 +7,4 @@ setup(name='lamdba_dd_metrics',
       author='Vladimir Li',
       author_email='vlad@500px.com',
       license='Apache',
-      zip_safe=False)
+      zip_safe=True)
