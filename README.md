@@ -18,11 +18,11 @@ unless you're willing to set up a statsd server for this (somewhat defeating the
 
 ## For Contributors
 * Bump the version in `setup.py`
-* Run the following: `python setup.py register sdist upload`
+* Build the package: `python setup.py sdist`
+* Upload using [twine](https://pypi.python.org/pypi/twine): `twine upload dist/*`
 * If the above fails, make sure you have `~/.pypirc` with the following contents:
 ```
-[server-login]
-repository: https://pypi.python.org/pypi
-username: your_username
-password: your_password
+[pypi]
+username = your_username
+password = your_password
 ```
