@@ -1,13 +1,19 @@
 import unittest
+import sys
 
 from lambda_dd_metrics import DataDogMetrics
-from mock import call, MagicMock, patch
+try:
+    import mock
+except ImportError:
+    if sys.version_info < (3,4):
+        # No built-in mock library
+        raise
+    from unittest import mock
+
+mock_time = mock.MagicMock()
 
 
-mock_time = MagicMock()
-
-
-@patch('time.time', mock_time)
+@mock.patch('time.time', mock_time)
 class TestDataDogMetrics(unittest.TestCase):
 
     def test_incr(self):
@@ -76,11 +82,11 @@ class TestDataDogMetrics(unittest.TestCase):
     def test_timer(self):
         mock_time.side_effect = [float(100), float(200), float(1234)]
         dd = DataDogMetrics('test')
-        mock_histogram = dd.histogram = MagicMock(wraps=dd.histogram)
+        mock_histogram = dd.histogram = mock.MagicMock(wraps=dd.histogram)
 
         dd.timer('test_metric')(lambda x: x)('echo')
         actual_call = mock_histogram.call_args
 
-        expected_call = call('test_metric', float(100), None)
+        expected_call = mock.call('test_metric', float(100), None)
 
         self.assertEqual(expected_call, actual_call)
