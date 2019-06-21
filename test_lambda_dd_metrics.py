@@ -1,7 +1,7 @@
 import unittest
 import sys
 
-from lambda_dd_metrics import DataDogMetrics
+from lambda_dd_metrics import DataDogMetrics, AggregatedDataDogMetrics
 try:
     import mock
 except ImportError:
@@ -104,4 +104,43 @@ class TestDataDogMetrics(unittest.TestCase):
         with self.assertRaises(NotImplementedError):
             dd.set('test_metric', { 1,2,3 }, [ 'tag' ])
 
+        return
+
+    def test_aggregate_counters(self):
+        mock_time.return_value = float(1234)
+        dd = AggregatedDataDogMetrics('test')
+        dd.incr('test_metric', 5)
+        dd.incr('test_metric', 2, [ 'tag1'])
+        dd.incr('test_metric', 3),
+        dd.incr('test_metric', tags =[ 'tag2', 'tag1'])
+        dd.incr('test_metric')
+        dd.incr('metric2', 7, [ 'tag1'])
+        dd.incr('test_metric', 11, [ 'tag1', 'tag2'])
+        dd.incr('test_metric', -1, [ 'tag1'])
+        lines = set(dd.flush())
+        expected = {
+            'MONITORING|1234|9|count|test.test_metric',
+            'MONITORING|1234|1|count|test.test_metric|#tag1',
+            'MONITORING|1234|12|count|test.test_metric|#tag1,tag2',
+            'MONITORING|1234|7|count|test.metric2|#tag1',
+        }
+        self.assertEqual(lines, expected)
+        return
+
+    def test_aggregate_guages(self):
+        mock_time.return_value = float(1234)
+        dd = AggregatedDataDogMetrics('test')
+        dd.gauge('test_metric', 5)
+        dd.gauge('test_metric', 2, [ 'tag1'])
+        dd.gauge('test_metric', 3)
+        dd.gauge('metric2', 7, [ 'tag1'])
+        dd.gauge('test_metric', 6, [ 'tag1', 'tag2'])
+        lines = set(dd.flush())
+        expected = {
+            'MONITORING|1234|3|gauge|test.test_metric',
+            'MONITORING|1234|2|gauge|test.test_metric|#tag1',
+            'MONITORING|1234|6|gauge|test.test_metric|#tag1,tag2',
+            'MONITORING|1234|7|gauge|test.metric2|#tag1',
+        }
+        self.assertEqual(lines, expected)
         return

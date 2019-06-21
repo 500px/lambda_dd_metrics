@@ -5,6 +5,7 @@ Simple interface for reporting metrics to DataDog.
 
 from __future__ import print_function
 import itertools
+import collections
 from functools import wraps
 import time
 
@@ -102,3 +103,81 @@ class DataDogMetrics(object):
             metric += '|#{}'.format(','.join(tags))
         print(metric)
         return metric
+
+
+class AggregatedDataDogMetrics(DataDogMetrics):
+    def __init__(self, *args, **kwargs):
+        DataDogMetrics.__init__(self, *args, **kwargs)
+        self._counts = self._make_dict_of_dicts(int)
+        self._gauges = collections.defaultdict(dict)
+        self._histograms = self._make_dict_of_dicts(list)
+        self._sets = self._make_dict_of_dicts(set)
+        self.tag_orderings = collections.defaultdict(dict)
+        return
+
+    def __del__(self):
+        for _ in self.flush():
+            pass
+
+    def incr(self, metric_name, count=1, tags=None):
+        self._counts[metric_name][self._make_aggregation_index(metric_name, tags)] += count
+        return
+
+    def gauge(self, metric_name, value, tags=None):
+        self._gauges[metric_name][self._make_aggregation_index(metric_name, tags)] = value
+        return
+
+    def histogram(self, metric_name, value, tags=None):
+        self._histograms[metric_name][self._make_aggregation_index(metric_name, tags)].append(value)
+        return
+
+    def set(self, metric_name, value, tags=None):
+        self._sets[metric_name][self._make_aggregation_index(metric_name, tags)].add(value)
+        return
+
+    def flush(self):
+        "Return an iterator which yields each line to be printed and prints it"
+        for metric_name, tags, count in self._consume_aggregate(self._counts):
+            yield DataDogMetrics.incr(self, metric_name, count, tags)
+
+        for metric_name, tags, gauge in self._consume_aggregate(self._gauges):
+            yield DataDogMetrics.gauge(self, metric_name, gauge, tags)
+
+        for metric_name, tags, set_ in self._consume_aggregate(self._counts):
+            yield DataDogMetrics.set(self, metric_name, set_, tags)
+
+        for metric_name, tags, hist in self._consume_aggregate(self._counts):
+            yield DataDogMetrics.histogram(self, metric_name, hist, tags)
+
+        return
+
+    @staticmethod
+    def _make_dict_of_dicts(leaf_type):
+        "Make a defaultdict, whose values are defaultdicts, whose values in turn are of leaf_type."
+        return collections.defaultdict(lambda: collections.defaultdict(leaf_type))
+
+    def _consume_aggregate(self, nested_aggregate):
+        "Return a generator which yields triplet of (metric_name, tags, aggreagte_value)"
+        # FIXME: The use if items() could give very poor performance in Python 2.7.
+        #We should probably use the 'six' compatibility library here, to get code that will
+        # call iteritems() in Python 2.7
+        for metric_name, aggr_by_tag in nested_aggregate.items():
+            tags_mapping = self.tag_orderings[metric_name]
+            for hashed_tags, aggr in aggr_by_tag.items():
+                tags = tags_mapping[hashed_tags]
+                yield (metric_name, tags, aggr)
+
+            # FIXME: ideally we should be deleting individual entries as we consume them, as that would
+            # be the most exception-safe thing to do.
+            aggr_by_tag.clear()
+
+        nested_aggregate.clear()
+
+    def _make_aggregation_index(self, metric_name, tags):
+        "Return a hashable, ordering-independent representation of the tags, and store the original ordering"
+        user_tags = tags or frozenset()
+        hashable_tags = frozenset(user_tags)
+        if (len(hashable_tags) != len(user_tags)):
+            raise ValueError("Duplicate tags in {}".format(tags))
+        self.tag_orderings[metric_name][hashable_tags] = tags
+        return hashable_tags
