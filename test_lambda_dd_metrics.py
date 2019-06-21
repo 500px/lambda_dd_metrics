@@ -28,20 +28,28 @@ class TestDataDogMetrics(unittest.TestCase):
     def test_incr_with_tag(self):
         mock_time.return_value = float(1234)
         dd = DataDogMetrics('test')
-        actual = dd.incr('test_metric', tags=['tag'])
 
         expected = 'MONITORING|1234|1|count|test.test_metric|#tag'
+        for tags in (['tag'], ('tag',), {'tag'}, frozenset({'tag'})):
+            actual = dd.incr('test_metric', tags=tags)
+            self.assertEqual(expected, actual)
 
-        self.assertEqual(expected, actual)
+        return
 
     def test_incr_with_tags(self):
         mock_time.return_value = float(1234)
         dd = DataDogMetrics('test')
-        actual = dd.incr('test_metric', tags=['tag1', 'tag2'])
 
         expected = 'MONITORING|1234|1|count|test.test_metric|#tag1,tag2'
+        for tags in (['tag1', 'tag2'], ('tag1', 'tag2')):
+            actual = dd.incr('test_metric', tags=tags)
+            self.assertEqual(expected, actual)
 
-        self.assertEqual(expected, actual)
+        expected_alt_order = 'MONITORING|1234|1|count|test.test_metric|#tag2,tag1'
+        for tags in ({'tag1', 'tag2'}, frozenset({'tag1', 'tag2'})):
+            actual = dd.incr('test_metric', tags=tags)
+            self.assertLess( { actual }, { expected, expected_alt_order })
+        return
 
     def test_incr_with_stats_group(self):
         mock_time.return_value = float(1234)

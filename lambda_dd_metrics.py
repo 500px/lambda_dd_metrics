@@ -4,6 +4,7 @@ Simple interface for reporting metrics to DataDog.
 '''
 
 from __future__ import print_function
+import itertools
 from functools import wraps
 import time
 
@@ -80,7 +81,8 @@ class DataDogMetrics(object):
         # NOT SUPPORTED YET
 
     def _build_tags(self, tags=None):
-        return (tags or []) + self.default_tags
+        tags_type = type(tags) if tags is not None else tuple
+        return tags_type(itertools.chain(tags or (), self.default_tags))
 
     def _build_metric_name(self, metric_name):
         return '{0}.{1}'.format(self.service_prefix, metric_name)
