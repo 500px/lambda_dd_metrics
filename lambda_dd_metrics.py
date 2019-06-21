@@ -78,7 +78,7 @@ class DataDogMetrics(object):
         '''
         Set - Send a metric that tracks the number of unique items in a set
         '''
-        # NOT SUPPORTED YET
+        raise NotImplementedError("Set isn't implemented yet")
 
     def _build_tags(self, tags=None):
         tags_type = type(tags) if tags is not None else tuple

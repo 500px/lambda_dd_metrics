@@ -98,3 +98,10 @@ class TestDataDogMetrics(unittest.TestCase):
         expected_call = mock.call('test_metric', float(100), None)
 
         self.assertEqual(expected_call, actual_call)
+
+    def test_set(self):
+        dd = DataDogMetrics('test')
+        with self.assertRaises(NotImplementedError):
+            dd.set('test_metric', { 1,2,3 }, [ 'tag' ])
+
+        return
