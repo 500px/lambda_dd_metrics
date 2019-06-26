@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='lambda_dd_metrics',
-      version='1.0',
+      version='1.1',
       description='Wrapper around reporting metrics to DataDog from AWS Lambda python functions',
       url='http://github.com/500px/lambda_dd_metrics',
       author='500px Platform Team',
