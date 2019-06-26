@@ -13,7 +13,7 @@ except ImportError:
 mock_time = mock.MagicMock()
 
 
-@mock.patch('time.time', mock_time)
+@mock.patch('lambda_dd_metrics.DataDogMetrics._get_timestamp', mock_time)
 class TestDataDogMetrics(unittest.TestCase):
 
     def test_incr(self):

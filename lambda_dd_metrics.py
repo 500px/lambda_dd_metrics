@@ -59,9 +59,9 @@ class DataDogMetrics(object):
         def decorator(function):
             @wraps(function)
             def wrapper(*args, **kwargs):
-                start_time = time.time()
+                start_time = self._get_timestamp()
                 ret_val = function(*args, **kwargs)
-                duration = time.time() - start_time
+                duration = self._get_timestamp() - start_time
                 self.histogram(metric_name, duration, tags)
                 return ret_val
 
@@ -80,6 +80,10 @@ class DataDogMetrics(object):
         '''
         raise NotImplementedError("Set isn't implemented yet")
 
+    @staticmethod
+    def _get_timestamp():
+        return time.time()
+
     def _build_tags(self, tags=None):
         tags_type = type(tags) if tags is not None else tuple
         return tags_type(itertools.chain(tags or (), self.default_tags))
@@ -88,7 +92,7 @@ class DataDogMetrics(object):
         return '{0}.{1}'.format(self.service_prefix, metric_name)
 
     def _print_metric(self, metric_type, metric_name, value, tags):
-        unix_epoch_timestamp = int(time.time())
+        unix_epoch_timestamp = int(self._get_timestamp())
         metric = 'MONITORING|{0}|{1}|{2}|{3}'.format(
             unix_epoch_timestamp,
             value,
