@@ -8,6 +8,9 @@ import itertools
 import collections
 from functools import wraps
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class DataDogMetrics(object):
@@ -116,8 +119,8 @@ class AggregatedDataDogMetrics(DataDogMetrics):
         return
 
     def __del__(self):
-        for _ in self.flush():
-            pass
+        n = self.flush_all()
+        self._log_send_if_nonzero(n, "total remaining")
 
     def incr(self, metric_name, count=1, tags=None):
         self._counts[metric_name][self._make_aggregation_index(metric_name, tags)] += count
@@ -151,6 +154,14 @@ class AggregatedDataDogMetrics(DataDogMetrics):
 
         return
 
+    def flush_all(self):
+        "Flush all the buffered metrics and return a total count of metrics flushed"
+        n = 0
+        for n, _ in enumerate(self.flush(), start = 1):
+            pass
+
+        return n
+
     @staticmethod
     def _make_dict_of_dicts(leaf_type):
         "Make a defaultdict, whose values are defaultdicts, whose values in turn are of leaf_type."
@@ -181,3 +192,6 @@ class AggregatedDataDogMetrics(DataDogMetrics):
             raise ValueError("Duplicate tags in {}".format(tags))
         self.tag_orderings[metric_name][hashable_tags] = tags
         return hashable_tags
+    def _log_send_if_nonzero(self, n, name):
+        if n != 0:
+            logger.info("Sent %d %s %s metric(s).", n, self.service_prefix, name)
