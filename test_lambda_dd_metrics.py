@@ -1,4 +1,5 @@
 import unittest
+import decimal
 import sys
 
 HAS_MODERN_UNITTEST = (sys.version_info >= (3,4))
@@ -112,17 +113,17 @@ class TestDataDogMetrics(unittest.TestCase):
         mock_time.return_value = float(1234)
         dd = AggregatedDataDogMetrics('test')
         dd.incr('test_metric', 5)
-        dd.incr('test_metric', 2, [ 'tag1'])
+        dd.incr('test_metric', 2.25, [ 'tag1'])
         dd.incr('test_metric', 3),
         dd.incr('test_metric', tags =[ 'tag2', 'tag1'])
         dd.incr('test_metric')
         dd.incr('metric2', 7, [ 'tag1'])
         dd.incr('test_metric', 11, [ 'tag1', 'tag2'])
-        dd.incr('test_metric', -1, [ 'tag1'])
+        dd.incr('test_metric', decimal.Decimal("-1.25"), [ 'tag1'])
         lines = set(dd.flush())
         expected = {
             'MONITORING|1234|9|count|test.test_metric',
-            'MONITORING|1234|1|count|test.test_metric|#tag1',
+            'MONITORING|1234|1.00|count|test.test_metric|#tag1',
             'MONITORING|1234|12|count|test.test_metric|#tag1,tag2',
             'MONITORING|1234|7|count|test.metric2|#tag1',
         }

@@ -123,7 +123,16 @@ class AggregatedDataDogMetrics(DataDogMetrics):
         self._log_send_if_nonzero(n, "total remaining")
 
     def incr(self, metric_name, count=1, tags=None):
-        self._counts[metric_name][self._make_aggregation_index(metric_name, tags)] += count
+        idx = self._make_aggregation_index(metric_name, tags)
+        counts_for_metric = self._counts[metric_name]
+        counter = self._counts[metric_name][self._make_aggregation_index(metric_name, tags)]
+        try:
+            counts_for_metric[idx] += count
+        except TypeError:
+            # If the type of the count value doesn't match that of the existing counter value, cast
+            # the current value to the type of the count and try again
+            logger.debug("Type mismatch trying to increment %s counter currently at %s by %s", metric_name, counter, count)
+            counts_for_metric[idx] = type(count)(counts_for_metric[idx]) + count
         return
 
     def gauge(self, metric_name, value, tags=None):
