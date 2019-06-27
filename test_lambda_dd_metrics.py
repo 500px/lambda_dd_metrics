@@ -1,11 +1,13 @@
 import unittest
 import sys
 
-from lambda_dd_metrics import DataDogMetrics, AggregatedDataDogMetrics
+HAS_MODERN_UNITTEST = (sys.version_info >= (3,4))
+
+from lambda_dd_metrics import DataDogMetrics, AggregatedDataDogMetrics, logger
 try:
     import mock
 except ImportError:
-    if sys.version_info < (3,4):
+    if not HAS_MODERN_UNITTEST:
         # No built-in mock library
         raise
     from unittest import mock
@@ -143,4 +145,30 @@ class TestDataDogMetrics(unittest.TestCase):
             'MONITORING|1234|7|gauge|test.metric2|#tag1',
         }
         self.assertEqual(lines, expected)
+        return
+
+    @unittest.skipUnless(HAS_MODERN_UNITTEST, "No support for testing logging")
+    def test_logging(self):
+        mock_time.return_value = float(1234)
+        dd = AggregatedDataDogMetrics('log_test')
+        with self.assertLogs(logger, "INFO") as cm:
+            dd.incr('test_metric', 5)
+            dd.incr('test_metric', 2, [ 'tag1'])
+            dd.incr('test_metric', -1)
+            dd.gauge('metric2', 7, [ 'tag1'])
+            assert dd.flush_all() == 3
+            self.assertEqual(set(cm.output), {
+                "INFO:lambda_dd_metrics:Sent 2 log_test count metric(s).",
+                "INFO:lambda_dd_metrics:Sent 1 log_test gauge metric(s)."
+            })
+
+
+        with self.assertLogs(logger, "INFO") as cm:
+            dd.incr('test_metric', 5)
+            del dd
+            self.assertEqual(cm.output, [
+                "INFO:lambda_dd_metrics:Sent 1 log_test count metric(s).",
+                "INFO:lambda_dd_metrics:Sent 1 log_test total remaining metric(s)."
+            ])
+
         return

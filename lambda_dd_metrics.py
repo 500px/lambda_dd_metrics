@@ -139,18 +139,26 @@ class AggregatedDataDogMetrics(DataDogMetrics):
         return
 
     def flush(self):
-        "Return an iterator which yields each line to be printed and prints it"
-        for metric_name, tags, count in self._consume_aggregate(self._counts):
+        "Return an generator which yields each line to be printed and prints it"
+        n = 0
+        for metric_name, tags, count, n in self._append_count(self._consume_aggregate(self._counts)):
             yield DataDogMetrics.incr(self, metric_name, count, tags)
+        self._log_send_if_nonzero(n, "count")
 
-        for metric_name, tags, gauge in self._consume_aggregate(self._gauges):
+        n = 0
+        for metric_name, tags, gauge, n in self._append_count(self._consume_aggregate(self._gauges)):
             yield DataDogMetrics.gauge(self, metric_name, gauge, tags)
+        self._log_send_if_nonzero(n, "gauge")
 
-        for metric_name, tags, set_ in self._consume_aggregate(self._counts):
+        n = 0
+        for metric_name, tags, set_, n in self._append_count(self._consume_aggregate(self._counts)):
             yield DataDogMetrics.set(self, metric_name, set_, tags)
+        self._log_send_if_nonzero(n, "set")
 
-        for metric_name, tags, hist in self._consume_aggregate(self._counts):
+        n = 0
+        for metric_name, tags, hist, n in self._append_count(self._consume_aggregate(self._counts)):
             yield DataDogMetrics.histogram(self, metric_name, hist, tags)
+        self._log_send_if_nonzero(n, "histogram")
 
         return
 
@@ -192,6 +200,13 @@ class AggregatedDataDogMetrics(DataDogMetrics):
             raise ValueError("Duplicate tags in {}".format(tags))
         self.tag_orderings[metric_name][hashable_tags] = tags
         return hashable_tags
+
+    @staticmethod
+    def _append_count(gen):
+        "Append a running count to the unpackable returned from a generator and yield the new object"
+        for n, tp in enumerate(gen, start = 1):
+            yield tuple(tp) + (n,)
+
     def _log_send_if_nonzero(self, n, name):
         if n != 0:
             logger.info("Sent %d %s %s metric(s).", n, self.service_prefix, name)
