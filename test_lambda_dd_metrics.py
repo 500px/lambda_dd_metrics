@@ -1,6 +1,7 @@
 import unittest
 import decimal
 import sys
+import math
 
 HAS_MODERN_UNITTEST = (sys.version_info >= (3,4))
 
@@ -69,7 +70,13 @@ class TestDataDogMetrics(unittest.TestCase):
         actual = dd.incr('test_metric', 5)
 
         expected = 'MONITORING|1234|5|count|test.test_metric'
+        self.assertEqual(expected, actual)
 
+    def test_incr_fract(self):
+        mock_time.return_value = float(1234)
+        dd = DataDogMetrics('test')
+        actual = dd.incr_fract('test_metric', 5.3456, 3)
+        expected = 'MONITORING|1234|5.346|count|test.test_metric'
         self.assertEqual(expected, actual)
 
     def test_gauge(self):
@@ -126,6 +133,23 @@ class TestDataDogMetrics(unittest.TestCase):
             'MONITORING|1234|1.00|count|test.test_metric|#tag1',
             'MONITORING|1234|12|count|test.test_metric|#tag1,tag2',
             'MONITORING|1234|7|count|test.metric2|#tag1',
+        }
+        self.assertEqual(lines, expected)
+        return
+
+    def test_aggregate_fractional_counters(self):
+        mock_time.return_value = float(1234)
+        dd = AggregatedDataDogMetrics('test')
+        dd.incr_fract('test_metric', math.pi, 4, [ 'pies' ])
+        dd.incr('test_metric', 1, tags = ( 'pies',) )
+        dd.incr_fract('test_metric', 2 * math.pi, 5, [ 'pies' ])
+        dd.incr_fract('test_metric', math.pi, tags = { 'pi' })
+        dd.incr_fract('test_metric', decimal.Decimal("0.00234"), 2, tags = { 'pi' })
+
+        lines = set(dd.flush())
+        expected = {
+            'MONITORING|1234|10.42479|count|test.test_metric|#pies',
+            'MONITORING|1234|3.141592654|count|test.test_metric|#pi'
         }
         self.assertEqual(lines, expected)
         return

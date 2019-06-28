@@ -6,7 +6,8 @@ Simple interface for reporting metrics to DataDog.
 from __future__ import print_function
 import itertools
 import collections
-from functools import wraps
+import functools
+import decimal
 import time
 import logging
 
@@ -29,12 +30,22 @@ class DataDogMetrics(object):
 
     def incr(self, metric_name, count=1, tags=None):
         '''
-        Incr - Increment a counter metric, providing a count of occurrences per
+        Incr - Increment a counter metric, providin a count of occurrences per
         second.
         '''
         full_metric_name = self._build_metric_name(metric_name)
         all_tags = self._build_tags(tags)
         return self._print_metric('count', full_metric_name, count, all_tags)
+
+
+
+    def incr_fract(self, metric_name, delta, prec = 9, tags=None):
+        '''
+        Incr_fract - Increment a counter by a fractional amount. A wrapper for incr with
+        user-controlled numeric precision
+        '''
+        rounded_delta = decimal.Decimal(delta).quantize(_get_rounding_factor(prec), decimal.ROUND_HALF_UP)
+        return self.incr(metric_name, rounded_delta, tags)
 
     def gauge(self, metric_name, value, tags=None):
         '''
@@ -61,7 +72,7 @@ class DataDogMetrics(object):
         of your function and reports it as a histogram.
         '''
         def decorator(function):
-            @wraps(function)
+            @functools.wraps(function)
             def wrapper(*args, **kwargs):
                 start_time = self._get_timestamp()
                 ret_val = function(*args, **kwargs)
@@ -106,6 +117,16 @@ class DataDogMetrics(object):
             metric += '|#{}'.format(','.join(tags))
         print(metric)
         return metric
+
+# A helper function to to cache the result of expensive decimal exponentiations (on Python versions that support this)
+def _get_rounding_factor(power):
+    return decimal.Decimal("0.1") ** power
+
+# Memoize the results of _get_rounding_factor for Python versions that have functools.lru_cache
+try:
+    _get_rounding_factor = functools.lru_cache()(_get_rounding_factor)
+except AttributeError:
+    pass
 
 
 class AggregatedDataDogMetrics(DataDogMetrics):
