@@ -130,6 +130,9 @@ except AttributeError:
 
 
 class AggregatedDataDogMetrics(DataDogMetrics):
+    ''' A wrapper for DataDogMetrics, which buffers calls to the incr, gauge, histogram and set methods,
+    and when requested sends aggregate values. The aggregation logic is specific to each metric type.
+    '''
     def __init__(self, *args, **kwargs):
         super(AggregatedDataDogMetrics, self).__init__(*args, **kwargs)
         self._counts = self._make_dict_of_dicts(int)
