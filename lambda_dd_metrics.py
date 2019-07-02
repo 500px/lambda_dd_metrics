@@ -131,7 +131,7 @@ except AttributeError:
 
 class AggregatedDataDogMetrics(DataDogMetrics):
     def __init__(self, *args, **kwargs):
-        DataDogMetrics.__init__(self, *args, **kwargs)
+        super(AggregatedDataDogMetrics, self).__init__(*args, **kwargs)
         self._counts = self._make_dict_of_dicts(int)
         self._gauges = collections.defaultdict(dict)
         self._histograms = self._make_dict_of_dicts(list)
@@ -172,22 +172,22 @@ class AggregatedDataDogMetrics(DataDogMetrics):
         "Return an generator which yields each line to be printed and prints it"
         n = 0
         for metric_name, tags, count, n in self._append_count(self._consume_aggregate(self._counts)):
-            yield DataDogMetrics.incr(self, metric_name, count, tags)
+            yield super(AggregatedDataDogMetrics, self).incr(metric_name, count, tags)
         self._log_send_if_nonzero(n, "count")
 
         n = 0
         for metric_name, tags, gauge, n in self._append_count(self._consume_aggregate(self._gauges)):
-            yield DataDogMetrics.gauge(self, metric_name, gauge, tags)
+            yield super(AggregatedDataDogMetrics, self).gauge(metric_name, gauge, tags)
         self._log_send_if_nonzero(n, "gauge")
 
         n = 0
         for metric_name, tags, set_, n in self._append_count(self._consume_aggregate(self._sets, iter)):
-            yield DataDogMetrics.set(self, metric_name, set_, tags)
+            yield super(AggregatedDataDogMetrics, self).set(metric_name, set_, tags)
         self._log_send_if_nonzero(n, "set")
 
         n = 0
         for metric_name, tags, hist, n in self._append_count(self._consume_aggregate(self._histograms, iter)):
-            yield DataDogMetrics.histogram(self, metric_name, hist, tags)
+            yield super(AggregatedDataDogMetrics, self).histogram(metric_name, hist, tags)
         self._log_send_if_nonzero(n, "histogram")
 
         return

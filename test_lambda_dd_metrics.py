@@ -205,9 +205,9 @@ class TestDataDogMetrics(unittest.TestCase):
         dd.flush_all()
         mock_set.assert_has_calls(
             [
-                mock.call(dd, 'test_metric', 2, None),
-                mock.call(dd, 'test_metric', 5, None),
-                mock.call(dd, 'test_metric', 2, [ 'tag1']),
+                mock.call('test_metric', 2, None),
+                mock.call('test_metric', 5, None),
+                mock.call('test_metric', 2, [ 'tag1']),
             ],
             any_order = True
         )
