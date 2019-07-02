@@ -181,12 +181,12 @@ class AggregatedDataDogMetrics(DataDogMetrics):
         self._log_send_if_nonzero(n, "gauge")
 
         n = 0
-        for metric_name, tags, set_, n in self._append_count(self._consume_aggregate(self._counts)):
+        for metric_name, tags, set_, n in self._append_count(self._consume_aggregate(self._sets, iter)):
             yield DataDogMetrics.set(self, metric_name, set_, tags)
         self._log_send_if_nonzero(n, "set")
 
         n = 0
-        for metric_name, tags, hist, n in self._append_count(self._consume_aggregate(self._counts)):
+        for metric_name, tags, hist, n in self._append_count(self._consume_aggregate(self._histograms, iter)):
             yield DataDogMetrics.histogram(self, metric_name, hist, tags)
         self._log_send_if_nonzero(n, "histogram")
 
@@ -205,7 +205,7 @@ class AggregatedDataDogMetrics(DataDogMetrics):
         "Make a defaultdict, whose values are defaultdicts, whose values in turn are of leaf_type."
         return collections.defaultdict(lambda: collections.defaultdict(leaf_type))
 
-    def _consume_aggregate(self, nested_aggregate):
+    def _consume_aggregate(self, nested_aggregate, value_iteraable_maker = lambda x: (x,)):
         "Return a generator which yields triplet of (metric_name, tags, aggreagte_value)"
         # FIXME: The use if items() could give very poor performance in Python 2.7.
         #We should probably use the 'six' compatibility library here, to get code that will
@@ -214,7 +214,8 @@ class AggregatedDataDogMetrics(DataDogMetrics):
             tags_mapping = self.tag_orderings[metric_name]
             for hashed_tags, aggr in aggr_by_tag.items():
                 tags = tags_mapping[hashed_tags]
-                yield (metric_name, tags, aggr)
+                for aggr in value_iteraable_maker(aggr):
+                    yield (metric_name, tags, aggr)
 
             # FIXME: ideally we should be deleting individual entries as we consume them, as that would
             # be the most exception-safe thing to do.

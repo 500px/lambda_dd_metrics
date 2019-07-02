@@ -15,6 +15,8 @@ except ImportError:
     from unittest import mock
 
 mock_time = mock.MagicMock()
+mock_set  = mock.MagicMock()
+mock_set.iter.return_value = iter([""])
 
 
 @mock.patch('lambda_dd_metrics.DataDogMetrics._get_timestamp', mock_time)
@@ -170,6 +172,45 @@ class TestDataDogMetrics(unittest.TestCase):
             'MONITORING|1234|7|gauge|test.metric2|#tag1',
         }
         self.assertEqual(lines, expected)
+        return
+
+    def test_aggregate_histograms(self):
+        mock_time.return_value = float(1234)
+        dd = AggregatedDataDogMetrics('test')
+        dd.histogram('test_metric', 5)
+        dd.histogram('test_metric', 2, [ 'tag1'])
+        dd.histogram('test_metric', 3)
+        dd.histogram('metric2', 7, [ 'tag1'])
+        dd.histogram('test_metric', 6, [ 'tag1', 'tag2'])
+        lines = set(dd.flush())
+        expected = {
+            'MONITORING|1234|5|histogram|test.test_metric',
+            'MONITORING|1234|3|histogram|test.test_metric',
+            'MONITORING|1234|2|histogram|test.test_metric|#tag1',
+            'MONITORING|1234|6|histogram|test.test_metric|#tag1,tag2',
+            'MONITORING|1234|7|histogram|test.metric2|#tag1',
+        }
+        self.assertEqual(lines, expected)
+        return
+
+
+    @mock.patch('lambda_dd_metrics.DataDogMetrics.set', mock_set) 
+    def test_aggregate_sets(self):
+        mock_time.return_value = float(1234)
+        dd = AggregatedDataDogMetrics('test')
+        dd.set('test_metric', 5)
+        dd.set('test_metric', 2)
+        dd.set('test_metric', 2, [ 'tag1'])
+        dd.set('test_metric', 5)
+        dd.flush_all()
+        mock_set.assert_has_calls(
+            [
+                mock.call(dd, 'test_metric', 2, None),
+                mock.call(dd, 'test_metric', 5, None),
+                mock.call(dd, 'test_metric', 2, [ 'tag1']),
+            ],
+            any_order = True
+        )
         return
 
     @unittest.skipUnless(HAS_MODERN_UNITTEST, "No support for testing logging")
