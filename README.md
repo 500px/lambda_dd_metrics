@@ -1,3 +1,5 @@
+This library is no longer supported, please use the [Datadog Lambda Layer](https://github.com/DataDog/datadog-lambda-layer-python) instead. Learn more about [monitoring lambda functions using Datadog](https://docs.datadoghq.com/integrations/amazon_lambda/).
+
 ## DataDog Metrics for Lambda Functions (python)
 
 To install: `pip install lambda_dd_metrics`
